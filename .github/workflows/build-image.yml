@@ -4,23 +4,23 @@ on:
   workflow_call:
     inputs:
       architecture:
-        description: Target runner architecture
+        description: "Runner architecture: amd64 or arm64."
         type: string
         default: amd64
       context:
-        description: Docker build context
+        description: "Docker build context path, for example . or ./service."
         type: string
         default: .
       file:
-        description: Dockerfile path
+        description: "Dockerfile path, for example Dockerfile or docker/Dockerfile."
         type: string
         default: Dockerfile
       build-args:
-        description: Newline-delimited Docker build arguments
+        description: "Newline-delimited Docker build arguments, for example VERSION=1.2.3."
         type: string
         default: ""
       repository-uri:
-        description: Container repository URI
+        description: "Container repository URI, for example 123456789012.dkr.ecr.eu-west-2.amazonaws.com/my-image; defaults to vars.ECR_REPOSITORY_URL."
         type: string
         default: ""
 
