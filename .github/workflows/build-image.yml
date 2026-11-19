@@ -20,9 +20,9 @@ on:
         type: string
         default: ""
       repository-uri:
-        description: "Container repository URI, for example 123456789012.dkr.ecr.eu-west-2.amazonaws.com/my-image; defaults to vars.ECR_REPOSITORY_URL."
+        description: "Container repository URI, for example 123456789012.dkr.ecr.eu-west-2.amazonaws.com/my-image; defaults to vars.ECR_REPOSITORY_URI."
         type: string
-        default: ""
+        default: ${{ vars.ECR_REPOSITORY_URI }}
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
         env:
           DOCKER_METADATA_PR_HEAD_SHA: "true"  # Argo CD preview environments
         with:
-          images: ${{ inputs.repository-uri || vars.ECR_REPOSITORY_URL }}
+          images: ${{ inputs.repository-uri }}
           tags: |
             type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=sha,format=short,prefix=
