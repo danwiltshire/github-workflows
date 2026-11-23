@@ -1,0 +1,98 @@
+name: Update GitOps values
+
+on:
+  workflow_call:
+    inputs:
+      application:
+        description: "Application directory under apps/, for example k8s-books."
+        type: string
+        required: true
+      environment:
+        description: "Environment filename under apps/<application>/envs/, for example production."
+        type: string
+        required: true
+      values:
+        description: "Newline-separated key=value assignments, for example celery.imageTag=abcdef and imageTag=abcdef. YAML comments and formatting may be lost."
+        type: string
+        required: true
+    secrets:
+      github-app-id:
+        description: GitHub App ID with contents write permission on danwiltshire/helm-charts.
+        required: true
+      github-app-private-key:
+        description: Private key for the GitHub App.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
+        with:
+          app-id: ${{ secrets.github-app-id }}
+          private-key: ${{ secrets.github-app-private-key }}
+          owner: danwiltshire
+          repositories: helm-charts
+          permission-contents: write
+
+      - name: Check out Helm charts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: danwiltshire/helm-charts
+          path: helm-charts
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+
+      - name: Prepare changes
+        id: changes
+        env:
+          APPLICATION: ${{ inputs.application }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          VALUES: ${{ inputs.values }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$APPLICATION" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ || ! "$ENVIRONMENT" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "::error::Application and environment must be single path components."
+            exit 1
+          fi
+
+          changes=$(jq -Rsc '
+            split("\n") | map(rtrimstr("\r") | select(length > 0) | split("=") |
+              if length < 2 or .[0] == "" then error("Expected key=value")
+              else {key: .[0], value: (.[1:] | join("="))} end) |
+            if length == 0 then error("No values provided") else from_entries end
+          ' <<< "$VALUES")
+          echo "json=$changes" >> "$GITHUB_OUTPUT"
+
+      - name: Update YAML values
+        uses: fjogeleit/yaml-update-action@dffe9a5223d84653c13374032382f6bb5de8e5ef # v0.17.0
+        with:
+          valueFile: apps/${{ inputs.application }}/envs/${{ inputs.environment }}.yaml
+          changes: ${{ steps.changes.outputs.json }}
+          workDir: helm-charts
+          commitChange: false
+
+      - name: Commit and push values update
+        working-directory: helm-charts
+        env:
+          APPLICATION: ${{ inputs.application }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          values_file="apps/$APPLICATION/envs/$ENVIRONMENT.yaml"
+          git add -- "$values_file"
+          if git diff --cached --quiet -- "$values_file"; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(gitops): update $APPLICATION $ENVIRONMENT values"
+          git push
