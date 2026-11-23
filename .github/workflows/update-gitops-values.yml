@@ -15,13 +15,6 @@ on:
         description: "Newline-separated key=value assignments, for example celery.imageTag=abcdef and imageTag=abcdef. YAML comments and formatting may be lost."
         type: string
         required: true
-    secrets:
-      github-app-id:
-        description: GitHub App ID with contents write permission on danwiltshire/helm-charts.
-        required: true
-      github-app-private-key:
-        description: Private key for the GitHub App.
-        required: true
 
 permissions:
   contents: read
@@ -34,7 +27,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
         with:
-          app-id: ${{ secrets.github-app-id }}
+          client-id: ${{ secrets.github-app-id }}
           private-key: ${{ secrets.github-app-private-key }}
           owner: danwiltshire
           repositories: helm-charts

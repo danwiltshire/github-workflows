@@ -24,6 +24,11 @@ on:
         type: string
         default: ${{ vars.ECR_REPOSITORY_URI }}
 
+    outputs:
+      sha-tag:
+        description: "Short commit SHA used as the image tag, for example abcdef1."
+        value: ${{ jobs.build.outputs.sha-tag }}
+
 permissions:
   contents: read
   id-token: write
@@ -31,6 +36,8 @@ permissions:
 jobs:
   build:
     runs-on: ${{ inputs.architecture == 'amd64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
+    outputs:
+      sha-tag: ${{ steps.sha-tag.outputs.tag }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -46,11 +53,21 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         env:
           DOCKER_METADATA_PR_HEAD_SHA: "true"  # Argo CD preview environments
+          DOCKER_METADATA_SHORT_SHA_LENGTH: "7"
         with:
           images: ${{ inputs.repository-uri }}
           tags: |
             type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
             type=sha,format=short,prefix=
+
+      - name: Expose SHA tag
+        id: sha-tag
+        env:
+          TAG_NAMES: ${{ steps.meta.outputs.tag-names }}
+        run: |
+          set -euo pipefail
+          tag=$(grep -Ex '[0-9a-f]{7}' <<< "$TAG_NAMES")
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
