@@ -27,8 +27,8 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
         with:
-          client-id: ${{ secrets.github-app-id }}
-          private-key: ${{ secrets.github-app-private-key }}
+          client-id: ${{ secrets.DANFORGE_GITOPS_APP_ID }}
+          private-key: ${{ secrets.DANFORGE_GITOPS_APP_PRIVATE_KEY }}
           owner: danwiltshire
           repositories: helm-charts
           permission-contents: write
