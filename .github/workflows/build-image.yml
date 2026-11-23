@@ -19,6 +19,10 @@ on:
         description: "Newline-delimited Docker build arguments, for example VERSION=1.2.3."
         type: string
         default: ""
+      tag-prefix:
+        description: "Prefix for image tags, for example ui produces ui-latest and ui-abcdef1."
+        type: string
+        default: ""
       repository-uri:
         description: "Container repository URI, for example 123456789012.dkr.ecr.eu-west-2.amazonaws.com/my-image; defaults to vars.ECR_REPOSITORY_URI."
         type: string
@@ -26,7 +30,7 @@ on:
 
     outputs:
       sha-tag:
-        description: "Short commit SHA used as the image tag, for example abcdef1."
+        description: "Image tag containing the short commit SHA, for example abcdef1 or ui-abcdef1."
         value: ${{ jobs.build.outputs.sha-tag }}
 
 permissions:
@@ -57,8 +61,8 @@ jobs:
         with:
           images: ${{ inputs.repository-uri }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-            type=sha,format=short,prefix=
+            type=raw,value=latest,prefix=${{ inputs.tag-prefix != '' && format('{0}-', inputs.tag-prefix) || '' }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=sha,format=short,prefix=${{ inputs.tag-prefix != '' && format('{0}-', inputs.tag-prefix) || '' }}
 
       - name: Expose SHA tag
         id: sha-tag
@@ -66,7 +70,7 @@ jobs:
           TAG_NAMES: ${{ steps.meta.outputs.tag-names }}
         run: |
           set -euo pipefail
-          tag=$(grep -Ex '[0-9a-f]{7}' <<< "$TAG_NAMES")
+          tag=$(grep -Ex '.*[0-9a-f]{7}' <<< "$TAG_NAMES")
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials

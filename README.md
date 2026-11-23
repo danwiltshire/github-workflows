@@ -17,13 +17,14 @@ Builds a Docker image and publishes it to Amazon ECR for pull requests and pushe
 | `context`        | string | No       | `.`                       | Docker build context.                     |
 | `file`           | string | No       | `Dockerfile`              | Path to the Dockerfile.                   |
 | `build-args`     | string | No       | Empty                     | Newline-separated Docker build arguments. |
+| `tag-prefix`     | string | No       | Empty                     | Prefix for all image tags, for example `ui`; a hyphen is added automatically. |
 | `repository-uri` | string | No       | `vars.ECR_REPOSITORY_URI` | ECR image repository URI.                 |
 
 ### Outputs
 
 | Output    | Description                                                                                       |
 | --------- | ------------------------------------------------------------------------------------------------- |
-| `sha-tag` | Seven-character commit SHA used as the image tag; for pull requests, this is the head commit SHA. |
+| `sha-tag` | Image tag containing the seven-character commit SHA and optional prefix; for pull requests, this is the head commit SHA. |
 
 ### Usage
 
@@ -44,6 +45,7 @@ jobs:
     uses: danwiltshire/github-workflows/.github/workflows/build-image.yml@main
     with:
       architecture: arm64
+      tag-prefix: ui
       build-args: |
         VERSION=1.2.3
     secrets: inherit
@@ -56,6 +58,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build.outputs.sha-tag }}
 ```
+
+For example, `tag-prefix: ui` produces `ui-abcdef1` and, on pushes to `main`, `ui-latest`. Use a different prefix such as `api` for another image in the same repository.
 
 ## Update GitOps values
 
