@@ -12,7 +12,7 @@ on:
         type: string
         required: true
       values:
-        description: "Newline-separated key=value assignments, for example celery.imageTag=abcdef and imageTag=abcdef. YAML comments and formatting may be lost."
+        description: 'YAML mapping to merge, for example imageTag: "abcdef" or celery: {imageTag: "abcdef"}. Quote values that must be strings.'
         type: string
         required: true
 
@@ -41,8 +41,8 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true
 
-      - name: Prepare changes
-        id: changes
+      - name: Update YAML values
+        working-directory: helm-charts
         env:
           APPLICATION: ${{ inputs.application }}
           ENVIRONMENT: ${{ inputs.environment }}
@@ -54,21 +54,11 @@ jobs:
             exit 1
           fi
 
-          changes=$(jq -Rsc '
-            split("\n") | map(rtrimstr("\r") | select(length > 0) | split("=") |
-              if length < 2 or .[0] == "" then error("Expected key=value")
-              else {key: .[0], value: (.[1:] | join("="))} end) |
-            if length == 0 then error("No values provided") else from_entries end
-          ' <<< "$VALUES")
-          echo "json=$changes" >> "$GITHUB_OUTPUT"
-
-      - name: Update YAML values
-        uses: fjogeleit/yaml-update-action@dffe9a5223d84653c13374032382f6bb5de8e5ef # v0.17.0
-        with:
-          valueFile: apps/${{ inputs.application }}/envs/${{ inputs.environment }}.yaml
-          changes: ${{ steps.changes.outputs.json }}
-          workDir: helm-charts
-          commitChange: false
+          if ! yq -n -e '(env(VALUES) | tag) == "!!map" and (env(VALUES) | length > 0)' > /dev/null; then
+            echo "::error::Values must be a non-empty YAML mapping."
+            exit 1
+          fi
+          yq -i '. *= env(VALUES)' "apps/$APPLICATION/envs/$ENVIRONMENT.yaml"
 
       - name: Commit and push values update
         working-directory: helm-charts
