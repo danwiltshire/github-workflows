@@ -2,16 +2,12 @@
 
 | Workflow                                      | Description                                                      |
 | --------------------------------------------- | ---------------------------------------------------------------- |
-| [Build image](#build-image)                   | Builds, scans, and publishes Docker images to Amazon ECR.        |
+| [Build image](#build-image)                   | Builds and publishes Docker images to Amazon ECR.                |
 | [Update GitOps values](#update-gitops-values) | Updates application environment values in the GitOps repository. |
 
 ## Build image
 
-Builds and scans a Docker image for vulnerabilities, and publishes it to Amazon ECR for pull requests and pushes to `main`.
-
-Trivy reports vulnerabilities of all severities without failing the build for findings; scan errors still fail the job. The full report is available in the job log, and pull requests receive a comment (truncated with a link to the log if necessary).
-
-Callers must grant `pull-requests: write` to post comments. Fork pull requests generally receive a read-only token and cannot post comments unless repository settings allow write tokens; they also need access to the AWS credentials required for publishing.
+Builds a Docker image and publishes it to Amazon ECR for pull requests and pushes to `main`.
 
 ### Inputs
 
@@ -43,7 +39,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  pull-requests: write
 
 jobs:
   build:
@@ -97,7 +92,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  pull-requests: write
 
 jobs:
   build:

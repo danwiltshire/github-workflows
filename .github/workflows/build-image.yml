@@ -36,7 +36,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  pull-requests: write
 
 jobs:
   build:
@@ -94,49 +93,5 @@ jobs:
           file: ${{ inputs.file }}
           build-args: ${{ inputs.build-args }}
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
-          load: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        env:
-          TRIVY_IMAGE_SRC: docker
-          TRIVY_FORMAT: table
-          TRIVY_SEVERITY: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-        with:
-          scan-type: image
-          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-          scanners: vuln
-          format: table
-          output: ${{ runner.temp }}/trivy-report.txt
-          exit-code: "0"
-
-      - name: Log vulnerability report
-        run: sed 's/^/  /' "$RUNNER_TEMP/trivy-report.txt"
-
-      - name: Comment vulnerability report on pull request
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          IMAGE_REF: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-        with:
-          script: |
-            const fs = require('fs');
-            const report = fs.readFileSync(`${process.env.RUNNER_TEMP}/trivy-report.txt`);
-            const truncated = report.length > 55000;
-            const findings = report.subarray(0, 55000).toString('utf8').trim() || 'No findings were reported.';
-            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const body = [
-              `### Trivy vulnerability scan: \`${process.env.IMAGE_REF}\``,
-              '',
-              '```',
-              findings,
-              '```',
-              truncated ? `Report truncated. See the [workflow run](${runUrl}) for the full report.` : ''
-            ].join('\n');
-            await github.rest.issues.createComment({
-              ...context.repo,
-              issue_number: context.issue.number,
-              body
-            });
