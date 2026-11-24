@@ -9,11 +9,9 @@
 
 Builds and scans a Docker image for vulnerabilities, and publishes it to Amazon ECR for pull requests and pushes to `main`.
 
-Trivy reports high and critical vulnerabilities without failing the build for findings; scan errors still fail the job. The full report is available in the job log, and pull requests receive a Markdown table showing up to 20 findings.
+Trivy reports vulnerabilities of all severities without failing the build for findings; scan errors still fail the job. The full report is available in the job log, and pull requests receive a comment (truncated with a link to the log if necessary).
 
-The comment is updated on subsequent scans, including scans of other images in the same pull request, so only one image's report is shown at a time.
-
-Callers must grant `pull-requests: write` and `issues: read` to post and update comments. Fork pull requests generally receive a read-only token and cannot post comments unless repository settings allow write tokens; they also need access to the AWS credentials required for publishing.
+Callers must grant `pull-requests: write` to post comments. Fork pull requests generally receive a read-only token and cannot post comments unless repository settings allow write tokens; they also need access to the AWS credentials required for publishing.
 
 ### Inputs
 
@@ -45,7 +43,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  issues: read
   pull-requests: write
 
 jobs:
@@ -100,7 +97,6 @@ on:
 permissions:
   contents: read
   id-token: write
-  issues: read
   pull-requests: write
 
 jobs:
